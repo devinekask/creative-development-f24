@@ -50,24 +50,24 @@
     const $exposure = document.querySelector('#exposure');
     const $saturation = document.querySelector('#saturation');
 
-    const gl = canvas.getContext('webgl');
-    const vertexShader = createShader(gl, gl.VERTEX_SHADER, `
-    precision mediump float;
+    const gl = canvas.getContext('webgl2');
+    const vertexShader = createShader(gl, gl.VERTEX_SHADER, `#version 300 es
+    precision highp float;
     
-    attribute vec2 a_position;
-    attribute vec2 a_texCoord;
+    in vec2 a_position;
+    in vec2 a_texCoord;
 
-    varying vec2 uv;
+    out vec2 uv;
     
     void main() {     
       gl_Position = vec4(a_position, 1, 1);
       uv = a_texCoord;
     }
     `);
-    const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, `
-    precision mediump float;
+    const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, `#version 300 es
+    precision highp float;
 
-    uniform sampler2D texture;
+    uniform sampler2D u_image;
 
     uniform mat4 u_brightnessMatrix;
     uniform vec4 u_brightnessOffset;
@@ -78,14 +78,16 @@
     uniform mat4 u_saturationMatrix;
     uniform vec4 u_saturationOffset;
 
-    varying vec2 uv;
+    in vec2 uv;
+
+    out vec4 outColor;
     
     void main() {
-      vec4 texel = texture2D(texture, uv);
+      vec4 texel = texture(u_image, uv);
       mat4 matrix = u_brightnessMatrix * u_contrastMatrix * u_exposureMatrix * u_saturationMatrix;
       vec4 offset = u_brightnessOffset + u_contrastOffset + u_exposureOffset + u_saturationOffset;
 
-      gl_FragColor = matrix * texel + offset;
+      outColor = matrix * texel + offset;
     }
     `);
     const program = createProgram(gl, vertexShader, fragmentShader);
@@ -175,7 +177,7 @@
       gl.enableVertexAttribArray(texCoordAttributeLocation);
       gl.vertexAttribPointer(texCoordAttributeLocation, 2, gl.FLOAT, false, 0, 0);
 
-      uploadImageToTexture(imgTexture, "texture", 0);
+      uploadImageToTexture(imgTexture, "u_image", 0);
 
       canvas.width = imgTexture.width;
       canvas.height = imgTexture.height;

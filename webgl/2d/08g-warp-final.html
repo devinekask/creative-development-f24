@@ -38,15 +38,15 @@
     };
 
     const canvas = document.querySelector('#c');
-    const gl = canvas.getContext('webgl');
-    const vertexShader = createShader(gl, gl.VERTEX_SHADER, `
-    precision mediump float;
+    const gl = canvas.getContext('webgl2');
+    const vertexShader = createShader(gl, gl.VERTEX_SHADER, `#version 300 es
+    precision highp float;
     
-    attribute vec2 a_position;
-    attribute vec2 a_texCoord;
+    in vec2 a_position;
+    in vec2 a_texCoord;
 
-    varying vec2 v_uv;
-    varying vec2 v_pos;
+    out vec2 v_uv;
+    out vec2 v_pos;
     
     void main() {     
       gl_Position = vec4(a_position, 1, 1);
@@ -54,16 +54,18 @@
       v_pos = gl_Position.xy;
     }
     `);
-    const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, `
-    precision mediump float;
+    const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, `#version 300 es
+    precision highp float;
 
-    uniform sampler2D texture;
+    uniform sampler2D u_image;
 
     uniform vec2 u_size;
     uniform float u_distortion;
 
-    varying vec2 v_uv;
-    varying vec2 v_pos;
+    in vec2 v_uv;
+    in vec2 v_pos;
+
+    out vec4 outColor;
     
     void main() {
       vec2 uv = v_uv;
@@ -83,7 +85,7 @@
       mask *= smoothstep(0.0, smoothY, texCoord.y);
       mask *= 1.0 - smoothstep(1.0 - smoothY, 1.0, texCoord.y);
 
-      // gl_FragColor = vec4(mask, 0.0, 0.0, 1.0); // mask preview
+      // outColor = vec4(mask, 0.0, 0.0, 1.0); // mask preview
 
       // zoom
       float zoomFactor = 1.0 - u_distortion * 0.5;
@@ -91,7 +93,7 @@
       texCoord.x += (1.0 - zoomFactor) * 0.5;
       texCoord.y += (1.0 - zoomFactor) * 0.5;
 
-      gl_FragColor = texture2D(texture, texCoord) * mask;
+      outColor = texture(u_image, texCoord) * mask;
 
     }
     `);
@@ -147,7 +149,7 @@
 
       gl.uniform2fv(sizeLocation, [imgTexture.width, imgTexture.height]);
 
-      uploadImageToTexture(imgTexture, "texture", 0);
+      uploadImageToTexture(imgTexture, "u_image", 0);
 
       canvas.width = imgTexture.width;
       canvas.height = imgTexture.height;

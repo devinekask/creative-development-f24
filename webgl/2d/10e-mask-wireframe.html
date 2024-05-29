@@ -44,24 +44,24 @@
     };
 
     const canvas = document.querySelector('#c');
-    const gl = canvas.getContext('webgl');
-    const vertexShader = createShader(gl, gl.VERTEX_SHADER, `
-    precision mediump float;
+    const gl = canvas.getContext('webgl2');
+    const vertexShader = createShader(gl, gl.VERTEX_SHADER, `#version 300 es
+    precision highp float;
     
-    attribute vec2 a_position;
-    attribute vec2 a_texCoord;
+    in vec2 a_position;
+    in vec2 a_texCoord;
 
-    varying vec2 uv;
+    out vec2 uv;
     
     void main() {     
       gl_Position = vec4(a_position, 1, 1);
       uv = a_texCoord;
     }
     `);
-    const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, `
-    precision mediump float;
+    const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, `#version 300 es
+    precision highp float;
 
-    uniform sampler2D texture;
+    uniform sampler2D u_image;
     uniform sampler2D maskTexture;
 
     uniform vec2 textureSize;
@@ -73,7 +73,8 @@
 
     uniform float phase;
 
-    varying vec2 uv;
+    in vec2 uv;
+    out vec4 outColor;
     
     void main() {
 
@@ -82,8 +83,8 @@
       vec2 leftUV = vec2(uv.x / 2.0, uv.y);
       vec2 rightUV = vec2(uv.x / 2.0 + 0.5, uv.y);
 
-      vec4 sampleColor = texture2D(texture, leftUV);
-      vec4 sampleRightColor = texture2D(texture, rightUV);
+      vec4 sampleColor = texture(u_image, leftUV);
+      vec4 sampleRightColor = texture(u_image, rightUV);
 
       float distance = length(uv - vec2(0.5, 0.5));
 
@@ -93,9 +94,9 @@
       vec2 distortedPosition = vec2(uv.x + dispFactor * (disp.r*effectFactor), uv.y);
 
       vec2 maskCoord = (distortedPosition - maskOffset) / maskScale;
-      vec4 maskColor = texture2D(maskTexture, maskCoord);
+      vec4 maskColor = texture(maskTexture, maskCoord);
 
-      gl_FragColor = mix(sampleColor, sampleRightColor, maskColor.r);
+      outColor = mix(sampleColor, sampleRightColor, maskColor.r);
     }
     `);
     const program = createProgram(gl, vertexShader, fragmentShader);
@@ -158,7 +159,7 @@
       gl.enableVertexAttribArray(texCoordAttributeLocation);
       gl.vertexAttribPointer(texCoordAttributeLocation, 2, gl.FLOAT, false, 0, 0);
 
-      uploadImageToTexture(imgTexture, "texture", 0);
+      uploadImageToTexture(imgTexture, "u_image", 0);
       uploadImageToTexture(maskTexture, "maskTexture", 1);
 
       gl.uniform2f(textureSizeLocation, imgTexture.width / 2, imgTexture.height);

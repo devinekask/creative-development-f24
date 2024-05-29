@@ -1,4 +1,4 @@
-# Creative Development, Fall 2023
+# Creative Development, Fall 2024
 
 This course is the finalizing technical / coding course at [Devine, a 3 year Bachelor degree](https://devine.be).
 
@@ -10,7 +10,7 @@ The following topics are covered for all students:
 
 Building native apps with React.
 
-### [Topic 2 - WebGL](webgl)
+### [Topic 2 - WebGL2](webgl)
 
 2D WebGL fragment shaders & 3D using ThreeJS.
 
@@ -22,9 +22,9 @@ Familiarize yourselves with the basics of Unity and C#.
 
 You'll present your research on a given library / framework
 
-## Expert Students - Week 7 - End of January
+## Passion Project
 
-When following this course as an "Expert", we'll cover these extra topics:
+When following this course as an "Passion Project", we'll cover these extra topics:
 
 ### [Swift](swift)
 

@@ -14,10 +14,10 @@ You need to load these html files through http. An easy way to do this, is by ad
 
 __Note: we've chosen to write all javascript in the html files themselves. While for projects, you might want to use a bundler, this is overkill for the quick demo and prototyping approach we're taking in this course.__
 
-Read through the following chapters in WebGL Fundamentals before continuing:
+Read through the following chapters in WebGL2 Fundamentals before continuing:
 
-- [Fundamentals](https://webglfundamentals.org/webgl/lessons/webgl-fundamentals.html)
-- [Textures](https://webglfundamentals.org/webgl/lessons/webgl-3d-textures.html)
+- [Fundamentals](https://webgl2fundamentals.org/webgl/lessons/webgl-fundamentals.html)
+- [Image Processing](https://webgl2fundamentals.org/webgl/lessons/webgl-image-processing.html)
 
 ## Showing an image
 
@@ -59,55 +59,55 @@ const createProgram = (gl, vertexShader, fragmentShader) => {
 This function receives a gl context, a vertext shader instance and a fragment shader instance (created with `createShader`).
 
 ```javascript
-const gl = canvas.getContext('webgl');
+const gl = canvas.getContext('webgl2');
 ```
 
 We're getting the context from the canvas as a webgl context. You might have used `2d` contexts before, which would run on the CPU. WebGL contexts will work with shader programs, on the GPU.
 
 ```glsl
-const vertexShader = createShader(gl, gl.VERTEX_SHADER, `
-precision mediump float;
+const vertexShader = createShader(gl, gl.VERTEX_SHADER, `#version 300 es
+    
+  in vec2 a_position;
+  in vec2 a_texCoord;
 
-attribute vec2 a_position;
-attribute vec2 a_texCoord;
-
-varying vec2 uv;
-
-void main() {     
-  gl_Position = vec4(a_position, 1, 1);
-  uv = a_texCoord;
-}
+  out vec2 uv;
+  
+  void main() {     
+    gl_Position = vec4(a_position, 1, 1);
+    uv = a_texCoord;
+  }
 `);
 ```
 
 This block compiles a GLSL string to a vertext shader using the createShader function mentioned earlier. A couple of things in there are:
 
-- `attribute vec2 a_position`: an attribute buffer of type vec2 (2d vector). We will provide an array with coordinates as an input, this position is used to calculate the vertex positions on the screen ([clip space - see webglfundamental](https://webglfundamentals.org/webgl/lessons/webgl-fundamentals.html#webgl-hello-world))
-- `attribute vec2 a_texCoord`: an attribute which will specify where we sample a color from the texture. It is specified as 2d vectors in uv-coordinate space (values between 0 and 1).
-- `varying vec2 uv`: a "varying" type - this is a way to pass values from the vertex shader to the fragment shader. Note that we're setting the value of uv to be the same as the a_texCoord attribute.
+- `in vec2 a_position`: an attribute buffer of type vec2 (2d vector). We will provide an array with coordinates as an input, this position is used to calculate the vertex positions on the screen ([clip space - see webglfundamental](https://webgl2fundamentals.org/webgl/lessons/webgl-fundamentals.html#webgl-hello-world))
+- `in vec2 a_texCoord`: an attribute which will specify where we sample a color from the texture. It is specified as 2d vectors in uv-coordinate space (values between 0 and 1).
+- `out vec2 uv`: an output type - we use out from the vertex shader to pass a value to the fragment shader. Note that we're setting the value of uv to be the same as the a_texCoord attribute.
 - `main()`: this method us run automatically for each pixel when executing the shader.
 - `gl_Position`: set this variable to a 4d coordinate (x, y, z, w). As we will be handing 2D logic at first, z and w will be set to 1.
 
 ```glsl
-const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, `
-precision mediump float;
+const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, `#version 300 es
+precision highp float;
 
-uniform sampler2D texture;
-
-varying vec2 uv;
+uniform sampler2D u_image;
+in vec2 uv;
+out vec4 outColor;
 
 void main() {
-  gl_FragColor = texture2D(texture, uv);
+  outColor = texture(u_image, uv);
 }
 `);
 ```
 
 Same, but now it's compiling the fragment shader code. A fragment shader is used to determine the target pixel color.
 
-- `uniform sampler2D texture`: the pixels to use as input. In this chapter we will be using images (or videos) as input.
-- `varying vec2 uv`: a 2d vector, passed in from our vertex shader.
+- `uniform sampler2D u_image`: the pixels to use as input. In this chapter we will be using images (or videos) as input.
+- `in vec2 uv`: a 2d vector, passed in from our vertex shader.
+- `out vec4 outColor`: the target pixel color as a 4d vector (r,g,b,a).
 - `main()`: this method us run automatically for each pixel when executing the shader.
-- `gl_FragColor`: the target pixel color as a 4d vector (r,g,b,a). In this example we're just taking the color of the pixel in the texture.
+- `outColor`: In this example we're just taking the color of the pixel in the texture.
 
 ```javascript
 const positionAttributeLocation = gl.getAttribLocation(program, "a_position");
@@ -161,7 +161,7 @@ __Note: this is a lot of boilerplate code to show an image on the screen. Most o
 
 ## Basic color adjustments
 
-The most important job of the fragment shader is providing a 4d color vector to `gl_FragColor`. In the show image boilerplate code, we sample a color from a texture and pass that unmodified color to the `gl_FragColor`.
+The most important job of the fragment shader is providing a 4d color vector to `outColor`. In the show image boilerplate code, we sample a color from a texture and pass that unmodified color to the `outColor`.
 
 You can do basic image color manipulation, by modifying the value of that sampled color.
 
@@ -169,9 +169,9 @@ For example: you could set the red component to full red:
 
 ```glsl
 void main() {
-  vec4 sampleColor = texture2D(texture, uv);
+  vec4 sampleColor = texture(u_image, uv);
   sampleColor.r = 1.0;
-  gl_FragColor = sampleColor;
+  outColor = sampleColor;
 }
 ```
 
@@ -306,9 +306,9 @@ We can calculate the effect matrix (eg brightess x contrast x exposure x saturat
 Change the fragment shader, so it receives one matrix and offset instead, and uses these to change the pixel color:
 
 ```diff
-precision mediump float;
+precision highp float;
 
-uniform sampler2D texture;
+uniform sampler2D u_image;
 
 - uniform mat4 u_brightnessMatrix;
 - uniform vec4 u_brightnessOffset;
@@ -322,14 +322,15 @@ uniform sampler2D texture;
 + uniform mat4 matrix;
 + uniform vec4 offset;
 
-varying vec2 uv;
+out vec2 uv;
+out vec4 outColor;
 
 void main() {
-  vec4 texel = texture2D(texture, uv);
+  vec4 texel = texture(u_image, uv);
 -  mat4 matrix = u_brightnessMatrix * u_contrastMatrix * u_exposureMatrix * u_saturationMatrix;
 -  vec4 offset = u_brightnessOffset + u_contrastOffset + u_exposureOffset + u_saturationOffset;
 
-  gl_FragColor = matrix * texel + offset;
+  outColor = matrix * texel + offset;
 }
 ```
 
@@ -400,7 +401,7 @@ Test your app, the result should be the same as previous, but the improvement
 
 ### Effects
 
-Continue with [the post on colour corrections](https://timseverien.com/posts/2020-06-19-colour-correction-with-webgl/) and implement the effects part. The big difference is you'll be using precalculated matrices instead of having a separate effect matrix.
+Continue with [the post on colour corrections](https://timseverien.com/posts/2020-06-19-colour-correction-with-webgl/) and implement the effects part. The big difference is you'll be using precalculated matrices instead of having a separate effect matrix and that that respective post was written for WebGL 1.0.
 
 You can find a couple of [effect matrices in the Doka documentation](https://pqina.nl/doka/docs/patterns/api/doka-instance/#setting-filters).
 
@@ -420,9 +421,9 @@ This effectFactor will be a value between 0 and 1. 0 will be: use the original c
 
 ```glsl
 void main() {
-  vec4 sampleColor = texture2D(texture, uv);
+  vec4 sampleColor = texture(u_image, uv);
   vec4 filteredColor = matrix * sampleColor + offset;
-  gl_FragColor = mix(sampleColor, filteredColor, effectFactor);
+  outColor = mix(sampleColor, filteredColor, effectFactor);
 }
 ```
 
@@ -484,7 +485,7 @@ Up until now, we've modified the color of a pixel with an operation which multip
 
 The next step is look at adjacent pixels, and take those color values into account as well. This way you can create effects such as edge detection (high contrast with adjacent pixel means there is an edge) and blur effects (calculate the color as an average color of adjacent pixels).
 
-Work through the steps at [webgl image processing](https://webglfundamentals.org/webgl/lessons/webgl-image-processing.html), starting from the alinea _"What if we want to do image processing that actually looks at other pixels?"_.
+Work through the steps at [webgl image processing](https://webgl2fundamentals.org/webgl/lessons/webgl-image-processing.html), starting from the alinea _"What if we want to do image processing that actually looks at other pixels?"_.
 
 ## 2D Displacement maps
 
@@ -493,7 +494,7 @@ Another technique to modify pixel colors is through displacement maps. Instead o
 In the fragment shader, you'll have 2 images: the image itself and a displacement texture:
 
 ```glsl
-uniform sampler2D texture;
+uniform sampler2D u_image;
 uniform sampler2D disp;
 ```
 
@@ -502,7 +503,7 @@ The sampling position gets influenced by the red channel of the displacement tex
 ```glsl
 float effectFactor = 0.05;
 vec2 distortedPosition = vec2(uv.x + disp.r * effectFactor, uv.y);
-gl_FragColor = texture2D(texture, distortedPosition);
+outColor = texture(u_image, distortedPosition);
 ```
 
 Applying a black and white displacement map such as the one below:
@@ -537,7 +538,7 @@ You could also mix 2 images using this displacement value. To do so, you would a
 In the fragment shader logic, you would calculate 2 displacement positions. One of them being the inverse-effect-position (by doing 1.0 minus the displacement factor):
 
 ```glsl
-vec4 disp = texture2D(disp, uv);
+vec4 disp = texture(disp, uv);
 vec2 distortedPosition = vec2(uv.x + dispFactor * (disp.r*effectFactor), uv.y);
 vec2 distortedPosition2 = vec2(uv.x - (1.0 - dispFactor) * (disp.r*effectFactor), uv.y);
 ```
@@ -545,14 +546,14 @@ vec2 distortedPosition2 = vec2(uv.x - (1.0 - dispFactor) * (disp.r*effectFactor)
 You would then use these two distortedPosition vectors to sample a color from each of the 2 images:
 
 ```glsl
-vec4 _texture = texture2D(texture, distortedPosition);
-vec4 _texture2 = texture2D(texture2, distortedPosition2);
+vec4 _texture = texture(u_image, distortedPosition);
+vec4 _texture2 = texture(u_image2, distortedPosition2);
 ```
 
 And use the mix function to interpolate between the two:
 
 ```glsl
-gl_FragColor = mix(_texture, _texture2, dispFactor);
+outColor = mix(_texture, _texture2, dispFactor);
 ```
 
 ![displacement effect between two images](images/displacement-2-images.gif)
@@ -569,12 +570,12 @@ We'll create some concentric ovals, using just math. In your fragment shader, ca
 float distance = length(uv - vec2(0.5, 0.5));
 ```
 
-Using a `sin` function, we can calculate the sine waveform from that distance. When multiplying this with a vec4 and setting that as the gl_FragColor you can visualize the results:
+Using a `sin` function, we can calculate the sine waveform from that distance. When multiplying this with a vec4 and setting that as the outColor you can visualize the results:
 
 ```glsl
 vec4 disp = vec4(1.0, 1.0, 1.0, 1.0);
 disp.rgb *= sin(distance);
-gl_FragColor = disp;
+outColor = disp;
 ```
 
 You should see a fade from a black center to a grey border:
@@ -649,12 +650,18 @@ ndc_pos *= mix(1.0, mix(1.0,len,max(abs(ndc_pos.x), abs(ndc_pos.y))), u_distorti
 vec2 texCoord = vec2(ndc_pos.s, -ndc_pos.t) * 0.5 + 0.5;
 ```
 
-In the shader code above, they're using the xy vertex position in the fragment shader. In order to access this, you can pass it as a varying from the vertex shader to the fragment shader.
+In the shader code above, they're using the xy vertex position in the fragment shader. In order to access this, you can pass it from the vertex shader to the fragment shader.
 
-Define the vertPos as a varying vec2 in __both__ your vertex and fragment shader:
+Define the vertPos as an `out vec2` in your vertex and an `in vec2` in your fragment shader:
 
+Vertex Shader:
 ```glsl
-varying vec2 vertPos;
+out vec2 vertPos;
+```
+
+Fragment Shader:
+```glsl
+in vec2 vertPos;
 ```
 
 Set this vertPos at the end of the main() function of your __vertex__ shader:
@@ -678,13 +685,13 @@ If you take a closer look at the edges, you'll notice that the pixels are repeat
 A quick approach is by adding a couple of if-statements and multiplying the color by 0 if the `texCoord` falls outside of our 0-1 range:
 
 ```glsl
-vec4 sampleColor = texture2D(texture, texCoord);
+vec4 sampleColor = texture(u_image, texCoord);
 
 if (texCoord.x < 0.0) {
   sampleColor *= 0.0;
 }
 
-gl_FragColor = sampleColor;
+outColor = sampleColor;
 ```
 
 Write the 3 other statements checking if x and y are between 0 and 1. You should see the following result:
@@ -717,7 +724,7 @@ if (texCoord.y > 1.0) {
 
 vec4 maskPreview = vec4(mask, mask, mask, 1.0);
 
-gl_FragColor = maskPreview;
+outColor = maskPreview;
 ```
 
 ![warp mask previous](images/warp-04.png)
@@ -752,7 +759,7 @@ As always, there's a [solution of the current state](2d/08e-warp-mask-smoothstep
 If you'd apply the calculate mask float with the sampleColor
 
 ```glsl
-gl_FragColor = sampleColor * mask;
+outColor = sampleColor * mask;
 ```
 
 you'd get a masked version of the image:
@@ -888,7 +895,7 @@ vec2 leftUV = vec2(uv.x / 2.0, uv.y);
 Use this `leftUV` coordinate for the color sampling, and comment out the masking factor for now:
 
 ```glsl
-gl_FragColor = texture2D(texture, leftUV); // * maskColor.r;
+outColor = texture(u_image, leftUV); // * maskColor.r;
 ```
 
 You should get the following result:
@@ -914,7 +921,7 @@ Calculate a `rightUV` as well for displaying the right side of the image, and te
 Let's add the masking interaction again. What we'll do is sample both the leftUV and rightUV coordinate, and mix the colors depending on the masking value:
 
 ```glsl
-gl_FragColor = mix(texture2D(texture, leftUV), texture2D(texture, rightUV), maskColor.r);
+outColor = mix(texture(u_image, leftUV), texture(u_image, rightUV), maskColor.r);
 ```
 
 Test the app. You'll notice we're kind-of there, but the mouse coordinates are off for some reason:
@@ -955,7 +962,7 @@ const $video = document.querySelector('#video');
 Get rid of the imgTexture and use this $video element instead:
 
 ```javascript
-uploadImageToTexture($video, "texture", 0);
+uploadImageToTexture($video, "u_image", 0);
 gl.uniform1f(effectFactorLocation, properties.effectFactor);
 
 canvas.width = $video.width;
@@ -973,7 +980,7 @@ We'll need to wait for [the canplay event](https://developer.mozilla.org/en-US/d
 ```javascript
 $video.addEventListener('canplay', () => {
   console.log('can play');
-  uploadImageToTexture($video, "texture", 0);
+  uploadImageToTexture($video, "u_image", 0);
   gl.uniform1f(effectFactorLocation, properties.effectFactor);
 
   canvas.width = $video.width;
@@ -1039,7 +1046,7 @@ When uploading a texture, it passes that texture as a static collection of pixel
 Add the upload call before doing drawArray in the drawScene method:
 
 ```javascript
-uploadImageToTexture($video, "texture", 0);
+uploadImageToTexture($video, "u_image", 0);
 
 gl.drawArrays(gl.TRIANGLES, 0, 6);
 ```
@@ -1083,99 +1090,7 @@ Try again: the app should run smoothly in all browsers. On hover, you'll see the
 
 You can find all sorts of impressive shader demos at https://shadertoy.com. Some of these shaders are proof-of-concept demos of what's possible by just using GLSL, but not necessarily best practices when having an effect in mind. But there are quite a few shaders there we can use as a source of inspiration for our own work.
 
-It's not as simple as just copy/pasting the code in your work, you'll need to do a few tweaks first.
-
-Start off from the basic image example again. We'll implement the shader from https://www.shadertoy.com/view/Xsl3zn in our own code.
-
-![screenshot of Shadertoy code](images/shadertoy-01.jpg)
-
-The main entrypoint of a shadertoy shader is a function called `mainImage` which receives 2 parameters as you can see in the screenshot above:
-
-- `out vec4 fragColor` - assigning this variable will set the output color
-- `in vec2 fragCoord` - this variable contains the x and y coordinate of the pixel
-
-Append the contents of the shadertoy shader to your fragment shader code and reload. You'll get a bunch of errors, such as:
-
-> WebGL: ERROR: 0:20: 'iResolution' : undeclared identifier
->
-> WebGL: ERROR: 0:20: 'xy' :  field selection requires structure or vector on left hand side
->
-> WebGL: ERROR: 0:25: 'iTime' : undeclared identifier
-
-A Shadertoy shaders receives a bunch of extra inputs, which are not listed in the code. If you expand the Shader Inputs section, you'll see an overview of these inputs:
-
-![shadertoy inputs](images/shadertoy-02.png)
-
-Look at the shadertoy code itself, and declare the necessary inputs (so: only the ones you're seeing being used) in the top section of your fragment shader code.
-
-You might get an error on the iChannelXXX syntax:
-
-> WebGL: ERROR: 0:8: 'iChannel0' : syntax error
-
-Actually, this should be our texture input. So: get rid of the `uniform samplerXX iChannel0...3` declaration and rename `uniform sampler2D texture;` to `uniform sampler2D iChannel0;`
-
-Another error you'll get is:
-
-> WebGL: ERROR: 0:12: 'texture' : no matching overloaded function found
-
-Make sure to call texture2D instead:
-
-```diff
-- vec2 warp = texture( iChannel0, uv*0.1 + iTime*vec2(0.04,0.03) ).xz;
-+ vec2 warp = texture2D( iChannel0, uv*0.1 + iTime*vec2(0.04,0.03) ).xz;
-```
-
-```diff
-- fragColor = vec4( texture( iChannel0, st ).xyz, 1.0 );
-+ fragColor = vec4( texture2D( iChannel0, st ).xyz, 1.0 );
-```
-
-The code should run again, but no effect is applied. [Compare with the solution](2d/12b-shadertoy-compiles.html) if you're stuck.
-
-### Calling the mainImage function
-
-We're not calling the mainImage function yet, our main function is still a simple sampler of our texture.
-
-Change the `main()` function, so it calls the `mainImage()` function:
-
-```glsl
-void main() {
-  mainImage(gl_FragColor, gl_FragCoord.xy);
-}
-```
-
-Depending on the order of your fragment shader code, you'll either see a single color, or an error:
-
-> WebGL: ERROR: 0:9: 'mainImage' : no matching overloaded function found
-
-Make sure you move your `main()` function to the bottom of the fragment shader. This way the `mainImage` function will be parsed and known to the `main()` function.
-
-### Providing the correct uniform values
-
-You've added 2 uniforms for this particular shader:
-
-```glsl
-uniform vec3 iResolution;
-uniform float iTime;
-```
-
-Try giving them the correct values from your javascript code. We've used similar inputs in previous exercises 😁
-
-You'll see an upside down version of your image:
-
-![upside down warped image](images/shadertoy-03.jpg)
-
-### Fixing the final issues
-
-Flipping the image vertically is as simple as inverting the `uv.y` coordinate:
-
-```glsl
-uv.y = 1.0 - uv.y;
-```
-
-Don't like the stripe-repeats at the edges? You can implement the `smoothstep` masking approach from earlier!
-
-![final result](images/shadertoy-04.jpg)
+[WebGL2Fundamentals has a great guide on how to convert a shadertoy shader to a WebGL shader](https://webgl2fundamentals.org/webgl/lessons/webgl-shadertoy.html).
 
 # WebGL 3D - Three.js
 

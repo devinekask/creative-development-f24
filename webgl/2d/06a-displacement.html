@@ -39,34 +39,36 @@
     };
 
     const canvas = document.querySelector('#c');
-    const gl = canvas.getContext('webgl');
-    const vertexShader = createShader(gl, gl.VERTEX_SHADER, `
-    precision mediump float;
+    const gl = canvas.getContext('webgl2');
+    const vertexShader = createShader(gl, gl.VERTEX_SHADER, `#version 300 es
+    precision highp float;
     
-    attribute vec2 a_position;
-    attribute vec2 a_texCoord;
+    in vec2 a_position;
+    in vec2 a_texCoord;
 
-    varying vec2 uv;
+    out vec2 uv;
     
     void main() {     
       gl_Position = vec4(a_position, 1, 1);
       uv = a_texCoord;
     }
     `);
-    const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, `
-    precision mediump float;
+    const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, `#version 300 es
+    precision highp float;
 
-    uniform sampler2D texture;
+    uniform sampler2D u_image;
     uniform sampler2D disp;
 
     uniform float effectFactor;
 
-    varying vec2 uv;
+    in vec2 uv;
+
+    out vec4 outColor;
     
     void main() {
-      vec4 disp = texture2D(disp, uv);
+      vec4 disp = texture(disp, uv);
       vec2 distortedPosition = vec2(uv.x + disp.r*effectFactor, uv.y);
-      gl_FragColor = texture2D(texture, distortedPosition);
+      outColor = texture(u_image, distortedPosition);
     }
     `);
     const program = createProgram(gl, vertexShader, fragmentShader);
@@ -119,7 +121,7 @@
       gl.enableVertexAttribArray(texCoordAttributeLocation);
       gl.vertexAttribPointer(texCoordAttributeLocation, 2, gl.FLOAT, false, 0, 0);
 
-      uploadImageToTexture(imgTexture, "texture", 0);
+      uploadImageToTexture(imgTexture, "u_image", 0);
       uploadImageToTexture(imgDisplacement, "disp", 1);
 
       canvas.width = imgTexture.width;
