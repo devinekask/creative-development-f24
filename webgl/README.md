@@ -114,6 +114,8 @@ const positionAttributeLocation = gl.getAttribLocation(program, "a_position");
 const positionBuffer = gl.createBuffer();
 ```
 
+> In WebGL, uniforms and attributes are used to pass data to shaders, but they serve different purposes.<br /><br />**Attributes** are used to pass per-vertex data to the vertex shader. Each vertex can have different attribute values.<br />**Uniforms** are per-primitive parameters (constant during an entire draw call). They are often used for transformation matrices, lighting parameters, or other global settings.
+
 Get a javascript reference to the `a_position` attribute in the webgl program. Also create a new empty gl buffer. We will be setting this buffer to a value later. There's a similar block for the `a_texCoord` buffer as well.
 
 ```javascript
@@ -180,6 +182,8 @@ You should see an image with the red channel boosted to max:
 ![photo with red boosted to max](images/red-image.jpg)
 
 Go through the post [Colour correction with webgl](https://timseverien.com/posts/2020-06-19-colour-correction-with-webgl/) until you reach Colour Matrices. We will cover that a bit later.
+
+> **Note**: The shader code in that blog post is webgl 1 code. You'll need to adjust the code to webgl 2.0. The main differences are:<br />- gl_FragColor is replaced by (out vec4) outColor<br />- the varying v_uv is replaced by (in vec2) uv<br />- we are using u_image as a our image, some examples use u_map instead.<br />- use "texture" intead of "texture2D" to get the pixel information.
 
 ### Interactive colour correction
 
@@ -397,13 +401,13 @@ gl.uniformMatrix4fv(matrixLocation, false, matrix);
 gl.uniform4fv(offsetLocation, offset);
 ```
 
-Test your app, the result should be the same as previous, but the improvement 
+Test your app, the result should be the same as previous, but the improvement is that we only calculate the matrix once for all pixels.
 
 ### Effects
 
 Continue with [the post on colour corrections](https://timseverien.com/posts/2020-06-19-colour-correction-with-webgl/) and implement the effects part. The big difference is you'll be using precalculated matrices instead of having a separate effect matrix and that that respective post was written for WebGL 1.0.
 
-You can find a couple of [effect matrices in the Doka documentation](https://pqina.nl/doka/docs/patterns/api/doka-instance/#setting-filters).
+You can find a couple of [effect matrices in the PixiJS ColorMatrixFilter class](https://github.com/pixijs/pixijs/blob/main/src/filters/defaults/color-matrix/ColorMatrixFilter.ts).
 
 As a final exercise, we'll animate between our regular colors and the effect colors:
 
@@ -447,6 +451,8 @@ gl.uniform1f(effectFactorLocation, effectFactor);
 
 You should see the colors switch on hover.
 
+> You could also apply this effectFactor as an interpolation value in javascript, instead of in GLSL. This would even be more efficient in this particular case. However, it's good to know how to use the mix function in GLSL.
+
 ### Animated effect
 
 To animate our effectFactor, we'll use [the GSAP animation library](https://greensock.com/docs/v3/Eases).
@@ -479,17 +485,9 @@ Don't forget to modify the code where you're passing the effectFactor into the s
 gl.uniform1f(effectFactorLocation, properties.effectFactor);
 ```
 
-## Kernels
-
-Up until now, we've modified the color of a pixel with an operation which multiplies the original pixel with a matrix.
-
-The next step is look at adjacent pixels, and take those color values into account as well. This way you can create effects such as edge detection (high contrast with adjacent pixel means there is an edge) and blur effects (calculate the color as an average color of adjacent pixels).
-
-Work through the steps at [webgl image processing](https://webgl2fundamentals.org/webgl/lessons/webgl-image-processing.html), starting from the alinea _"What if we want to do image processing that actually looks at other pixels?"_.
-
 ## 2D Displacement maps
 
-Another technique to modify pixel colors is through displacement maps. Instead of using a matrix or a buffer as an input modifyer, you can use a second texture as a data source. You can use the color value of this second texture as a modification value for the sampled color of your main texture.
+Another technique to modify pixel colors is through displacement maps. Instead of using a matrix or a buffer as an input modifier, you can use a second texture as a data source. You can use the color value of this second texture as a modification value for the sampled color of your main texture.
 
 In the fragment shader, you'll have 2 images: the image itself and a displacement texture:
 
@@ -947,10 +945,10 @@ You're not just limited to static images as textures: you can use videos as well
 
 Start off from [the ripple effect solution](2d/07d-ripple-final.html).
 
-Add a video tag below the canvas, you can [use our showreel](2d/videos/showreel-2020.mp4) as a source:
+Add a video tag below the canvas, you can [use our showreel](2d/videos/showreel-2023.mp4) as a source:
 
 ```html
-<video id="video" src="videos/showreel-2020.mp4"></video>
+<video id="video" src="videos/showreel-2023.mp4"></video>
 ```
 
 Get a javascript reference to this video tag, similar to how we've referenced the canvas tag:
@@ -975,7 +973,9 @@ When loading in the browser, you'll notice the canvas has a width and height of 
 
 This has to do with the fact that the video has not loaded yet when sending it over to our shader.
 
-We'll need to wait for [the canplay event](https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/canplay_event) before sending it over to our shader. Wrap the texture upload & the rest of the init function inside of the canplay handler:
+We'll need to wait for [the canplay event](https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/canplay_event) before sending it over to our shader.
+
+Wrap the texture upload & the rest of the init function inside of the canplay handler. Remove the src attribute from the video tag, and add it using javascript instead. This way, the video will start loading as soon as the page is loaded:
 
 ```javascript
 $video.addEventListener('canplay', () => {
@@ -991,6 +991,7 @@ $video.addEventListener('canplay', () => {
 
   drawScene();
 });
+$video.src = "videos/showreel-2023.mp4"
 ```
 
 You'll still have a canvas size of zero, but you might see the same error:
@@ -1006,12 +1007,12 @@ canvas.width = $video.videoWidth;
 canvas.height = $video.videoHeight;
 ```
 
-At time of writing, adding this resulted in showing the first frame in Safari. In Chrome, I still saw that same `INVALID_VALUE` error.
+At time of writing, adding this resulted in showing the first frame in Safari. In Chrome, I'm seeing a black video.
 
 Adding a `preload` attribute to our video tags fixes the issue in Chrome:
 
 ```html
-<video id="video" src="videos/showreel-2020.mp4" preload="auto"></video>
+<video id="video" src="videos/showreel-2023.mp4" preload="auto"></video>
 ```
 
 You should see the first frame of the video in all browsers.
@@ -1034,7 +1035,7 @@ We could solve this by adding a dedicated play button on the page and starting p
 Get rid of that `.play()` call first, and add the html attributes `autoplay`, `muted` and `playsinline` to your video tag:
 
 ```html
-<video id="video" src="videos/showreel-2020.mp4" preload="auto" autoplay playsinline muted></video>
+<video id="video" preload="auto" autoplay playsinline muted></video>
 ```
 
 Reload the browser, and you should see the video playing. The canvas is still frozen on the first frame though.
@@ -1051,40 +1052,7 @@ uploadImageToTexture($video, "u_image", 0);
 gl.drawArrays(gl.TRIANGLES, 0, 6);
 ```
 
-Test the app again. At time of writing this works nicely in Google Chrome. In Safari however, the canvas is flashing all over the place.
-
-This has to do with the fact that a new texture instance is created every time we call into uploadImageToTexture. We want to avoid creating new instances 60 times per second of course.
-
-We'll add a check in `uploadImageToTexture` to see if we've created a texture instance for a given name yet. We'll store the texture instances in a dictionary lookup `textures`:
-
-```diff
-+ const textures = {};
-
-const uploadImageToTexture = (img, uniformName, textureUnitIndex) => {
-  const u_imageLoc = gl.getUniformLocation(program, uniformName);
-  gl.uniform1i(u_imageLoc, textureUnitIndex);
-
-+ if (!textures[uniformName]) {
-+   textures[uniformName] = gl.createTexture();
-+ }
-
-+ const texture = textures[uniformName];
-- const texture = gl.createTexture();
-  gl.activeTexture(gl.TEXTURE0 + textureUnitIndex);
-  gl.bindTexture(gl.TEXTURE_2D, texture);
-
-  // Set the parameters so we can render any size image.
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-
-  // Upload the image into the texture.
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-};
-```
-
-Try again: the app should run smoothly in all browsers. On hover, you'll see the ripple effect playing on moving content.
+Test the app again. On hover, you'll see the ripple effect playing on moving content.
 
 ## Using a Shadertoy shader
 
