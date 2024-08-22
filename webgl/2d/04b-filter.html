@@ -7,14 +7,19 @@
   <title>WebGL</title>
 </head>
 <body>
-  <canvas id="c"></canvas>
 
   <div>
     <input type="range" id="brightness" min="-1" max="1" step="0.1" />Brightness<br />
     <input type="range" id="contrast" min="0" max="2" step="0.1" />Contrast<br />
     <input type="range" id="exposure" min="0" max="2" step="0.1" />Exposure<br />
     <input type="range" id="saturation" min="0" max="2" step="0.1" />Saturation<br />
+    <select id="filter"></select>
+    <button id="save">Save</button>
   </div>
+
+  <canvas id="c"></canvas>
+
+  
 
   <script type="module">
 
@@ -52,6 +57,8 @@
     const $contrast = document.getElementById('contrast');
     const $exposure = document.getElementById('exposure');
     const $saturation = document.getElementById('saturation');
+    const $filter = document.getElementById('filter');
+    const $button = document.getElementById('save');
 
     const gl = canvas.getContext('webgl2');
     const vertexShader = createShader(gl, gl.VERTEX_SHADER, `#version 300 es
@@ -107,6 +114,70 @@
 
     const u_saturationMatrix = mat4.create();
     const u_saturationOffset = vec4.create();
+
+    const filters = {
+        // make sure the original style is in the list
+        'original': {
+            label: 'Original',
+            matrix: () => [
+              1, 0, 0, 0, 0,
+              0, 1, 0, 0, 0,
+              0, 0, 1, 0, 0,
+              0, 0, 0, 1, 0,
+            ]
+        },
+
+        // the default filters
+        'chrome': {
+            label: 'Bright',
+            matrix: () => [
+                1.398,-0.316, 0.065,-0.273, 0.201,
+                -0.051, 1.278,-0.080,-0.273, 0.201,
+                -0.051, 0.119, 1.151,-0.290, 0.215,
+                    0.000, 0.000, 0.000, 1.000, 0.000
+            ]
+        },
+        'fade': {
+            label: 'Dark',
+            matrix: () => [
+                1.073,-0.015, 0.092,-0.115,-0.017,
+                0.107, 0.859, 0.184,-0.115,-0.017,
+                0.015, 0.077, 1.104,-0.115,-0.017,
+                0.000, 0.000, 0.000, 1.000, 0.000
+            ]
+        },
+        'mono': {
+            label: 'Mono',
+            matrix: () => [
+                0.212, 0.715, 0.114, 0.000, 0.000,
+                0.212, 0.715, 0.114, 0.000, 0.000,
+                0.212, 0.715, 0.114, 0.000, 0.000,
+                0.000, 0.000, 0.000, 1.000, 0.000
+            ]
+        },
+        'noir': {
+            label: 'Noir',
+            matrix: () => [
+                0.150, 1.300,-0.250, 0.100,-0.200,
+                0.150, 1.300,-0.250, 0.100,-0.200,
+                0.150, 1.300,-0.250, 0.100,-0.200,
+                0.000, 0.000, 0.000, 1.000, 0.000
+            ]
+        },
+
+        // add your own filters
+        'sepia': {
+            label: 'Sepia',
+            matrix: () => [
+                0.394, 0.769, 0.189, 0.000, 0.000,
+                0.349, 0.686, 0.168, 0.000, 0.000,
+                0.272, 0.534, 0.131, 0.000, 0.000,
+                0.000, 0.000, 0.000, 1.000, 0.000
+            ]
+        }
+    };
+
+    let selectedFilter = filters.original;
 
     const init = async () => {
       const imgTexture = await loadImage("images/devine_selectie-087.jpg");
@@ -205,6 +276,52 @@
 
       });
 
+      for (const filterName in filters) {
+        if (filters.hasOwnProperty(filterName)) {
+          const filter = filters[filterName];
+          const $option = document.createElement('option');
+          $option.value = filterName;
+          $option.textContent = filter.label;
+          $filter.appendChild($option);
+        }
+      }
+
+      $filter.addEventListener('input', (e) => {
+        const filterName = $filter.value;
+        selectedFilter = filters[filterName];
+      });
+
+      $button.addEventListener('click', (e) => {
+        mat4.identity(matrix);
+        mat4.multiply(matrix, matrix, u_brightnessMatrix);
+        mat4.multiply(matrix, matrix, u_contrastMatrix);
+        mat4.multiply(matrix, matrix, u_exposureMatrix);
+
+        mat4.multiply(matrix, matrix, u_saturationMatrix);
+
+        const selectedFilterResult = selectedFilter.matrix();
+        const filterMatrix = mat4.fromValues(
+          selectedFilterResult[0], selectedFilterResult[1], selectedFilterResult[2], selectedFilterResult[3],
+          selectedFilterResult[5], selectedFilterResult[6], selectedFilterResult[7], selectedFilterResult[8],
+          selectedFilterResult[10], selectedFilterResult[11], selectedFilterResult[12], selectedFilterResult[13],
+          selectedFilterResult[15], selectedFilterResult[16], selectedFilterResult[17], selectedFilterResult[18],
+        );
+        const filterOffset = vec4.fromValues(selectedFilterResult[4], selectedFilterResult[9], selectedFilterResult[14], selectedFilterResult[19]);
+
+        mat4.multiply(matrix, matrix, filterMatrix);
+
+        vec4.zero(offset);
+        vec4.add(offset, offset, u_brightnessOffset);
+        vec4.add(offset, offset, u_contrastOffset);
+        vec4.add(offset, offset, u_exposureOffset);
+        vec4.add(offset, offset, u_saturationOffset);
+
+        vec4.add(offset, offset, filterOffset);
+
+        console.log(matrix);
+        console.log(offset);
+      });
+
 
       drawScene();
     };
@@ -220,11 +337,18 @@
       mat4.multiply(matrix, matrix, u_contrastMatrix);
       mat4.multiply(matrix, matrix, u_exposureMatrix);
 
-      const saturationTransposed = mat4.create();
-      mat4.transpose(saturationTransposed, u_saturationMatrix);
+      mat4.multiply(matrix, matrix, u_saturationMatrix);
 
-      
-      mat4.multiply(matrix, matrix, saturationTransposed);
+      const selectedFilterResult = selectedFilter.matrix();
+      const filterMatrix = mat4.fromValues(
+        selectedFilterResult[0], selectedFilterResult[1], selectedFilterResult[2], selectedFilterResult[3],
+        selectedFilterResult[5], selectedFilterResult[6], selectedFilterResult[7], selectedFilterResult[8],
+        selectedFilterResult[10], selectedFilterResult[11], selectedFilterResult[12], selectedFilterResult[13],
+        selectedFilterResult[15], selectedFilterResult[16], selectedFilterResult[17], selectedFilterResult[18],
+      );
+      const filterOffset = vec4.fromValues(selectedFilterResult[4], selectedFilterResult[9], selectedFilterResult[14], selectedFilterResult[19]);
+
+      mat4.multiply(matrix, matrix, filterMatrix);
 
       vec4.zero(offset);
       vec4.add(offset, offset, u_brightnessOffset);
@@ -232,7 +356,9 @@
       vec4.add(offset, offset, u_exposureOffset);
       vec4.add(offset, offset, u_saturationOffset);
 
-      gl.uniformMatrix4fv(matrixLocation, false, matrix);
+      vec4.add(offset, offset, filterOffset);
+
+      gl.uniformMatrix4fv(matrixLocation, true, matrix);
       gl.uniform4fv(offsetLocation, offset);
 
       gl.drawArrays(gl.TRIANGLES, 0, 6);

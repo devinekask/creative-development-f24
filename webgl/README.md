@@ -233,110 +233,32 @@ You should end up with something like this:
 
 Next up, we're going to be using color matrices as a more flexible way of modifying our target color. Each of our filters is currently a multiplication and / or addition of a vector with our original color. By using matrices, we can get rid of the separate formulas in our shader, and use a matrix input which will contain the multiplication and / or sum factors.
 
-Continue [Tim Severien's post on colour correction](https://timseverien.com/posts/2020-06-19-colour-correction-with-webgl/) with the matrix manipulation part. Wait with the filter part for now.
+Continue [Tim Severien's post on colour correction](https://timseverien.com/posts/2020-06-19-colour-correction-with-webgl/) with the matrix manipulation part. 
 
 Build a simple slider ui, so you can modify brightness, contrast, exposure and saturation from your javascript code.
 
-Beware: your matrices will need to be transposed when multiplying them. Here's a transpose function you could use for this:
+Adjust the fragment shader to use a matrix and offset:
 
-```javascript
-const transpose = (out, a) => {
-  // If we are transposing ourselves we can skip a few steps but have to cache some values
-  if (out === a) {
-    let a01 = a[1],
-        a02 = a[2],
-        a03 = a[3];
-    let a12 = a[6],
-        a13 = a[7];
-    let a23 = a[11];
-
-    out[1] = a[4];
-    out[2] = a[8];
-    out[3] = a[12];
-    out[4] = a01;
-    out[6] = a[9];
-    out[7] = a[13];
-    out[8] = a02;
-    out[9] = a12;
-    out[11] = a[14];
-    out[12] = a03;
-    out[13] = a13;
-    out[14] = a23;
-  } else {
-    out[0] = a[0];
-    out[1] = a[4];
-    out[2] = a[8];
-    out[3] = a[12];
-    out[4] = a[1];
-    out[5] = a[5];
-    out[6] = a[9];
-    out[7] = a[13];
-    out[8] = a[2];
-    out[9] = a[6];
-    out[10] = a[10];
-    out[11] = a[14];
-    out[12] = a[3];
-    out[13] = a[7];
-    out[14] = a[11];
-    out[15] = a[15];
-  }
-  return out;
-}
-```
-
-For example: when setting the values in the saturation array, you'll transpose them:
-
-```javascript
-transpose(u_saturationMatrix, [
-  sr + s, sg    , sb    , 0,
-  sr    , sg + s, sb    , 0,
-  sr    , sg    , sb + s, 0,
-  0     , 0     , 0     , 1,
-]);
-```
-
-Otherwise you'll end up with weird colors, especially with the saturation factors 🌈.
-
-You can [check out the solution](2d/04a-color-matrix.html) when you're stuck.
-
-![sliders controlling the filters](images/color-matrices-sliders.gif)
-
-### Precalculate matrices
-
-Right now, we're doing our matrix multiplication per pixel in our shader. We've got a matrix per effect (brightness, contrast, exposure and saturation), so this approach has some overhead (the same resulting matrix with the effect is calculated for each pixel).
-
-We can calculate the effect matrix (eg brightess x contrast x exposure x saturation) once in our javascript code, and send in that effect matrix. This way, our shader will have a bit less work.
-
-Change the fragment shader, so it receives one matrix and offset instead, and uses these to change the pixel color:
-
-```diff
+```glsl
+#version 300 es
 precision highp float;
 
 uniform sampler2D u_image;
 
-- uniform mat4 u_brightnessMatrix;
-- uniform vec4 u_brightnessOffset;
-- uniform mat4 u_contrastMatrix;
-- uniform vec4 u_contrastOffset;
-- uniform mat4 u_exposureMatrix;
-- uniform vec4 u_exposureOffset;
-- uniform mat4 u_saturationMatrix;
-- uniform vec4 u_saturationOffset;
+uniform mat4 matrix;
+uniform vec4 offset;
 
-+ uniform mat4 matrix;
-+ uniform vec4 offset;
+in vec2 uv;
 
-out vec2 uv;
 out vec4 outColor;
 
 void main() {
-  vec4 texel = texture(u_image, uv);
--  mat4 matrix = u_brightnessMatrix * u_contrastMatrix * u_exposureMatrix * u_saturationMatrix;
--  vec4 offset = u_brightnessOffset + u_contrastOffset + u_exposureOffset + u_saturationOffset;
-
-  outColor = matrix * texel + offset;
+  vec4 sampleColor = texture(u_image, uv);
+  outColor = matrix * sampleColor + offset;
 }
 ```
+
+We can calculate the effect matrix (eg brightess x contrast x exposure x saturation) once in our javascript code, and send in that effect matrix. 
 
 [Download gl-matrix](http://glmatrix.net) and extract it in your project folder.
 
@@ -352,44 +274,33 @@ Import vec4 and mat4 from gl-matrix in your javascript code. Note: you'll need t
     // etc...
 ```
 
-Add a general matrix and offset, which will store the multiplications and sums of all these matrices and offsets:
+Create the matrices and offsets for each of the filters and the final matrix and offset:
 
 ```javascript
 const matrix = mat4.create();
 const offset = vec4.create();
+
+const u_brightnessMatrix = mat4.create();
+const u_brightnessOffset = vec4.create();
+
+const u_contrastMatrix = mat4.create();
+const u_contrastOffset = vec4.create();
+
+const u_exposureMatrix = mat4.create();
+const u_exposureOffset = vec4.create();
+
+const u_saturationMatrix = mat4.create();
+const u_saturationOffset = vec4.create();
 ```
 
-These create methods just create regular arrays. You can modify the matrices and offsets you've already got for the effect to use these create methods, or just leave them as they are right now.
-
-We'll no longer need the uniform locations to the separate effects, but will need uniform locations for the general matrix and offset:
-
-```diff
-- const u_brightnessMatrixLocation = gl.getUniformLocation(program, "u_brightnessMatrix");
-- const u_brightnessOffsetLocation = gl.getUniformLocation(program, "u_brightnessOffset");
-
-- const u_contrastMatrixLocation = gl.getUniformLocation(program, "u_contrastMatrix");
-- const u_contrastOffsetLocation = gl.getUniformLocation(program, "u_contrastOffset");
-
-- const u_exposureMatrixLocation = gl.getUniformLocation(program, "u_exposureMatrix");
-- const u_exposureOffsetLocation = gl.getUniformLocation(program, "u_exposureOffset");
-
-- const u_saturationMatrixLocation = gl.getUniformLocation(program, "u_saturationMatrix");
-- const u_saturationOffsetLocation = gl.getUniformLocation(program, "u_saturationOffset");
-
-+ const matrixLocation = gl.getUniformLocation(program, "matrix");
-+ const offsetLocation = gl.getUniformLocation(program, "offset");
-```
-
-Finally, you'll be doing the matrix calculations in your draw loop:
+These create methods create an identity matrix and a zero vector. You can use these as a starting point for your calculations.
 
 ```javascript
 mat4.identity(matrix);
 mat4.multiply(matrix, matrix, u_brightnessMatrix);
 mat4.multiply(matrix, matrix, u_contrastMatrix);
 mat4.multiply(matrix, matrix, u_exposureMatrix);
-const saturationTransposed = mat4.create();
-mat4.transpose(saturationTransposed, u_saturationMatrix);
-mat4.multiply(matrix, matrix, saturationTransposed);
+mat4.multiply(matrix, matrix, u_saturationMatrix);
 
 vec4.zero(offset);
 vec4.add(offset, offset, u_brightnessOffset);
@@ -397,11 +308,31 @@ vec4.add(offset, offset, u_contrastOffset);
 vec4.add(offset, offset, u_exposureOffset);
 vec4.add(offset, offset, u_saturationOffset);
 
-gl.uniformMatrix4fv(matrixLocation, false, matrix);
+gl.uniformMatrix4fv(matrixLocation, true, matrix);
 gl.uniform4fv(offsetLocation, offset);
 ```
 
-Test your app, the result should be the same as previous, but the improvement is that we only calculate the matrix once for all pixels.
+Given the blog post, write the necessary event handlers on the sliders to modify the matrices and offsets. For example, the contrast matrix and offset logic would be:
+
+```javascript
+$contrast.addEventListener('input', e => {
+  const x = $contrast.value;
+  const y = (1 - x) / 2;
+
+  u_contrastMatrix[0] = x;
+  u_contrastMatrix[5] = x;
+  u_contrastMatrix[10] = x;
+  u_contrastMatrix[15] = x;
+
+  u_contrastOffset[0] = y;
+  u_contrastOffset[1] = y;
+  u_contrastOffset[2] = y;
+});
+```
+
+You can [check out the solution](2d/04a-color-matrix.html) when you're stuck.
+
+![sliders controlling the filters](images/color-matrices-sliders.gif)
 
 ### Effects
 
