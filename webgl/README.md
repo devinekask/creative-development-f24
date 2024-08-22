@@ -991,6 +991,67 @@ You can find all sorts of impressive shader demos at https://shadertoy.com. Some
 
 [WebGL2Fundamentals has a great guide on how to convert a shadertoy shader to a WebGL shader](https://webgl2fundamentals.org/webgl/lessons/webgl-shadertoy.html).
 
+![screenshot of Shadertoy code](images/shadertoy-01.jpg)
+
+The main entrypoint of a shadertoy shader is a function called `mainImage` which receives 2 parameters as you can see in the screenshot above:
+
+- `out vec4 fragColor` - assigning this variable will set the output color
+- `in vec2 fragCoord` - this variable contains the x and y coordinate of the pixel
+
+Append the contents of the shadertoy shader to your fragment shader code and reload. You'll get a bunch of errors, such as:
+
+> ERROR: 0:25: 'iTime' : undeclared identifier<br />
+> ERROR: 0:30: 'iChannel0' : undeclared identifier<br />
+> ERROR: 0:30: 'texture' : no matching overloaded function found<br />
+> ERROR: 0:30: 'xyz' :  field selection requires structure, vector, or interface block on left hand side
+
+A Shadertoy shaders receives a bunch of extra inputs, which are not listed in the code. If you expand the Shader Inputs section, you'll see an overview of these inputs:
+
+![shadertoy inputs](images/shadertoy-02.png)
+
+Look at the shadertoy code itself, and declare the necessary inputs (so: only the ones you're seeing being used) in the top section of your fragment shader code.
+
+**iChannel0 is a texture input, so you can rename u_image to iChannel0.**
+
+The code should run again, but no effect is applied. We're not calling the mainImage function yet, our main function is still a simple sampler of our texture.
+
+Change the `main()` function, so it calls the `mainImage()` function:
+
+```glsl
+void main() {
+  mainImage(gl_FragColor, gl_FragCoord.xy);
+}
+```
+
+### Providing the correct uniform values
+
+You've added 2 uniforms for this particular shader:
+
+```glsl
+uniform vec3 iResolution;
+uniform float iTime;
+```
+
+Try giving them the correct values from your javascript code. We've used similar inputs in previous exercises 😁
+
+You'll see an upside down version of your image:
+
+![upside down warped image](images/shadertoy-03.jpg)
+
+### Fixing the final issues
+
+Flipping the image vertically is as simple as inverting the `fragCoord`  coordinate you pass into the main method:
+
+```glsl
+void main() {
+  mainImage(outColor, vec2(gl_FragCoord.x, iResolution.y - gl_FragCoord.y));
+}
+```
+
+Don't like the stripe-repeats at the edges? You can implement the `smoothstep` masking approach from earlier!
+
+![final result](images/shadertoy-04.jpg)
+
 # WebGL 3D - Three.js
 
 Survived the WebGL 2D part? Let's add the 3rd dimension to our apps!
