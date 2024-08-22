@@ -991,6 +991,8 @@ You can find all sorts of impressive shader demos at https://shadertoy.com. Some
 
 [WebGL2Fundamentals has a great guide on how to convert a shadertoy shader to a WebGL shader](https://webgl2fundamentals.org/webgl/lessons/webgl-shadertoy.html).
 
+For this exercise, we're going to get the shader at https://www.shadertoy.com/view/Xsl3zn working in our own project.
+
 ![screenshot of Shadertoy code](images/shadertoy-01.jpg)
 
 The main entrypoint of a shadertoy shader is a function called `mainImage` which receives 2 parameters as you can see in the screenshot above:
