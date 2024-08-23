@@ -1,24 +1,12 @@
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { Link, Tabs } from 'expo-router';
-import { Pressable, useColorScheme } from 'react-native';
+import { Tabs } from 'expo-router';
+import React from 'react';
 
-import Colors from '../../constants/Colors';
-import { useOrderStore } from '../../store/useOrderStore';
-
-/**
- * You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
- */
-function TabBarIcon(props: {
-  name: React.ComponentProps<typeof FontAwesome>['name'];
-  color: string;
-}) {
-  return <FontAwesome size={28} style={{ marginBottom: -3 }} {...props} />;
-}
+import { TabBarIcon } from '@/components/navigation/TabBarIcon';
+import { Colors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  const orders = useOrderStore(state => state.orders);
-  const coffeeCount = orders.reduce((acc, order) => acc + order.amount, 0);
 
   return (
     <Tabs
@@ -30,15 +18,18 @@ export default function TabLayout() {
         name="(index)"
         options={{
           title: 'Coffees',
-          tabBarIcon: ({ color }) => <TabBarIcon name="coffee" color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon name={focused ? 'cafe' : 'cafe-outline'} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="order"
         options={{
-          title: 'Orders',
-          tabBarBadge: coffeeCount > 0 ? coffeeCount : undefined,
-          tabBarIcon: ({ color }) => <TabBarIcon name="shopping-cart" color={color} />,
+          title: 'Order',
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon name={focused ? 'cart' : 'cart-outline'} color={color} />
+          ),
         }}
       />
     </Tabs>

@@ -42,7 +42,7 @@ For this exercise, there is a **video series** available on our learning platfor
 Create a new project based upon the tabs template from Expo (also see https://docs.expo.dev/routing/installation/#quick-start)
 
 ```bash
-npx create-expo-app@latest --template tabs@49
+npx create-expo-app@latest
 ```
 
 It'll ask you to give your app a name, choose "plant-based-barista".
@@ -62,12 +62,11 @@ Explore the generated code. You'll see that there are two tabs created and even 
 ├── app
 │   ├── (tabs)
 │   │   ├── _layout.tsx
+│   │   ├── explore.tsx
 │   │   ├── index.tsx
-│   │   ├── two.tsx
 │   ├── _layout.tsx
-│   ├── [...missing].tsx
 │   ├── +html.tsx
-│   ├── modal.tsx
+│   ├── +not-found.tsx
 ```
 
 Make sure to read through the documentation to get a grasp of how this file structure works:
@@ -75,58 +74,11 @@ Make sure to read through the documentation to get a grasp of how this file stru
 - https://docs.expo.dev/routing/create-pages/
 - https://docs.expo.dev/routing/layouts/
 
-### Remove the modal
-
-Remove the Stack embedding the modal view in the `app/_layout.tsx` file.
-
-```diff
-function RootLayoutNav() {
-  const colorScheme = useColorScheme();
-
-  return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
--        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-      </Stack>
-    </ThemeProvider>
-  );
-}
-```
-
-You can also remove the `app/modal.tsx` file.
-
-Also get rid of the headerRight button from the `app/(tabs)/_layout.tsx` file:
-
-```diff
-<Tabs.Screen
-  name="index"
-  options={{
-    title: 'Tab One',
-    tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
--    headerRight: () => (
--      <Link href="/modal" asChild>
--        <Pressable>
--          {({ pressed }) => (
--            <FontAwesome
--              name="info-circle"
--              size={25}
--              color={Colors[colorScheme ?? 'light'].text}
--              style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
--            />
--          )}
--        </Pressable>
--      </Link>
--    ),
-  }}
-/>
-```
-
 ### Tab icon and label
 
-Our two tabs need a nice icon and a label. Expo ships with FontAwesome icons. Find an icon for our coffees list and checkout on https://icons.expo.fyi/Index.
+Our two tabs need a nice icon and a label. Expo ships with IonIcons icons. Find an icon for our coffees list and checkout on https://ionic.io/ionicons/v4.
 
-You can use the icon name in the `<TabBarIcon name="code" color={color} />` component.
+You can use the icon name in the `<TabBarIcon name={focused ? 'cafe' : 'cafe-outline'} color={color} />` component.
 
 Change the `title` properties of the two tabs as well into "Coffees" and "Order".
 

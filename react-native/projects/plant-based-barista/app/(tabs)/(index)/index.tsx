@@ -1,51 +1,51 @@
-import { Pressable, StyleSheet } from 'react-native';
+import { Image, Pressable, StyleSheet } from 'react-native';
 
-import { Text, View } from '../../../components/Themed';
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
+
+import { coffees } from '@/data/coffees';
 import { FlashList } from '@shopify/flash-list';
-import { Image } from 'expo-image';
-
-import { coffees } from '../../../data/coffees';
+import { Ionicons } from '@expo/vector-icons';
 import { Link, Stack } from 'expo-router';
-import { FontAwesome } from '@expo/vector-icons';
-import { useOrderStore } from '../../../store/useOrderStore';
+import { useOrderStore } from '@/store/useOrderStore';
 
-export default function TabOneScreen() {
+export default function HomeScreen() {
 
   const orderCoffee = useOrderStore(state => state.orderCoffee);
 
   return (
-    <>
-      <Stack.Screen options={{
-        title: 'Coffees',
-      }} />
-      <View style={styles.container}>
-        <FlashList
-          data={coffees}
-          renderItem={({ item }) => <View style={styles.item}>
-            <Link href={`/(tabs)/(index)/${item.id}`} style={styles.link}>
-              <View style={styles.left}>
-                <Image
-                  source={item.image}
-                  style={{ width: 60, height: 60 }}
-                />
-                <View>
-                  <Text style={styles.name}>{item.name}</Text>
-                  <Text>EUR {item.price}</Text>
-                </View>
-              </View>
-            </Link>
-            <View>
-              <Pressable
-                onPress={() => orderCoffee(item)}
-              >
-                <FontAwesome name="plus-circle" size={24} />
-              </Pressable>
-            </View>
-          </View>}
-          estimatedItemSize={60}
-        />
-      </View>
-    </>
+    <ThemedView style={styles.container}>
+      <Stack.Screen
+        options={{
+          title: "Coffees",
+        }}
+      />
+      <FlashList
+        data={coffees}
+        renderItem={({ item }) => <ThemedView style={styles.item}>
+          <Link href={`/(tabs)/(index)/${item.id}`} style={styles.link}>
+            <ThemedView style={styles.left}>
+              <Image
+                source={item.image}
+                style={{ width: 60, height: 60 }}
+              />
+              <ThemedView>
+                <ThemedText style={styles.name}>{item.name}</ThemedText>
+                <ThemedText>EUR {item.price}</ThemedText>
+              </ThemedView>
+            </ThemedView>
+          </Link>
+          <ThemedView>
+            <Pressable
+              onPress={() => orderCoffee(item)}
+            >
+              <Ionicons name="add-circle" size={24} />
+            </Pressable>
+          </ThemedView>
+        </ThemedView>}
+        estimatedItemSize={60}
+      />
+    </ThemedView>
   );
 }
 
