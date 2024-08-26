@@ -14,10 +14,6 @@ Building native apps with React.
 
 2D WebGL fragment shaders & 3D using ThreeJS.
 
-### [Topic 3 - Unity](unity)
-
-Familiarize yourselves with the basics of Unity and C#.
-
 ### Capita Selecta
 
 You'll present your research on a given library / framework
@@ -25,6 +21,10 @@ You'll present your research on a given library / framework
 ## Passion Project
 
 When following this course as an "Passion Project", we'll cover these extra topics:
+
+### [Unity](unity)
+
+Familiarize yourselves with the basics of Unity and C#.
 
 ### [Swift](swift)
 
