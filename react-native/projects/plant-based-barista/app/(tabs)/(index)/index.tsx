@@ -1,78 +1,61 @@
-import { Image, Pressable, StyleSheet } from 'react-native';
-
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-
 import { coffees } from '@/data/coffees';
-import { FlashList } from '@shopify/flash-list';
-import { Ionicons } from '@expo/vector-icons';
-import { Link, Stack } from 'expo-router';
 import { useOrderStore } from '@/store/useOrderStore';
+import { Ionicons } from '@expo/vector-icons';
+import { FlashList } from '@shopify/flash-list';
+import { Link, Stack } from 'expo-router';
+import { Image, Pressable } from 'react-native';
 
 export default function HomeScreen() {
 
-  const orderCoffee = useOrderStore(state => state.orderCoffee);
+  const orderCoffee = useOrderStore((state) => state.orderCoffee);
 
   return (
-    <ThemedView style={styles.container}>
-      <Stack.Screen
-        options={{
-          title: "Coffees",
-        }}
-      />
+    <ThemedView style={{
+      flex: 1,
+    }}>
+      <Stack.Screen options={{ title: 'Coffees' }} />
       <FlashList
         data={coffees}
-        renderItem={({ item }) => <ThemedView style={styles.item}>
-          <Link href={`/(tabs)/(index)/${item.id}`} style={styles.link}>
-            <ThemedView style={styles.left}>
-              <Image
-                source={item.image}
-                style={{ width: 60, height: 60 }}
-              />
+        renderItem={({ item }) => (
+        <ThemedView style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          paddingLeft: 8,
+          paddingRight: 8,
+          paddingTop: 4,
+          paddingBottom: 4,
+          gap: 8,
+        }}>
+          <Link href={`/(tabs)/(index)/${item.id}`} style={{
+            flex: 1,
+          }}>
+            <ThemedView style={{
+              flexDirection: 'row',
+              gap: 10,
+            }}>
+              <Image source={item.image} style={{ width: 50, height: 50 }} />
               <ThemedView>
-                <ThemedText style={styles.name}>{item.name}</ThemedText>
-                <ThemedText>EUR {item.price}</ThemedText>
+                <ThemedText type='defaultSemiBold'>{item.name}</ThemedText>
+                <ThemedText>{item.price.toLocaleString("be-NL", { style: "currency", currency: "EUR" })}</ThemedText>
               </ThemedView>
             </ThemedView>
           </Link>
-          <ThemedView>
-            <Pressable
-              onPress={() => orderCoffee(item)}
-            >
-              <Ionicons name="add-circle" size={24} />
-            </Pressable>
-          </ThemedView>
-        </ThemedView>}
-        estimatedItemSize={60}
+          <Pressable
+            onPress={() => orderCoffee(item)}
+            style={({pressed}) => [
+              {
+                opacity: pressed ? 0.5 : 1.0,
+              },
+            ]}>
+            <Ionicons name='add-circle' size={24} />
+          </Pressable>
+        </ThemedView>
+        )}
+        estimatedItemSize={200}
       />
     </ThemedView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  item: {
-    flexDirection: 'row',
-    gap: 10,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingRight: 18,
-  },
-  left: {
-    flexDirection: 'row',
-    gap: 10,
-    alignItems: 'center',
-  },
-  link: {
-    display: 'flex',
-    flexDirection: 'row',
-    gap: 10,
-    alignItems: 'center',
-  },
-  name: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  }
-});

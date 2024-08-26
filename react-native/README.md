@@ -56,7 +56,7 @@ npm start
 
 You'll be offered a menu with some options to run the app in dev mode on web, iOS or android. Choose the option to run it in the iOS simulator.
 
-Explore the generated code. You'll see that there are two tabs created and even some logic in the header to open up a modal window.
+Explore the generated code. You'll see that there are two tabs created.
 
 ```
 ├── app
@@ -74,7 +74,45 @@ Make sure to read through the documentation to get a grasp of how this file stru
 - https://docs.expo.dev/routing/create-pages/
 - https://docs.expo.dev/routing/layouts/
 
+### Cleaning up the starter code
+
+The explore.tsx and index.tsx files contain a lot of demo code, let's get rid of that and keep them a bare minimum:
+
+```tsx
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
+
+export default function HomeScreen() {
+  return (
+    <ThemedView>
+      <ThemedText type="title">Coffees</ThemedText>
+    </ThemedView>
+  );
+}
+```
+
+> When running the project in the iOS simulator, you'll notice our content is appearing behind the status bar. We will ignore this for now, as this will be fixed automatically when we start wrapping our views in a navigation stack.
+
 ### Tab icon and label
+
+Rename the `explore.tsx` file to `order.tsx`. You'll notice the tab icon disappears and the label suddenly starts with a lowercase letter. You will also get a warning:
+
+> No route named "explore" exists in nested children
+
+You'll need to fix this by updating the name of the screen in the `app/(tabs)/_layout.tsx` file:
+
+```diff
+<Tabs.Screen
+-  name="explore"
++  name="explore"
+  options={{
+    title: 'Explore',
+    tabBarIcon: ({ color, focused }) => (
+      <TabBarIcon name={focused ? 'code-slash' : 'code-slash-outline'} color={color} />
+    ),
+  }}
+/>
+```
 
 Our two tabs need a nice icon and a label. Expo ships with IonIcons icons. Find an icon for our coffees list and checkout on https://ionic.io/ionicons/v4.
 
@@ -96,25 +134,13 @@ npx expo install @shopify/flash-list
 
 You can find the full documentation of the component at: https://shopify.github.io/flash-list/. Find the basic usage of that component in those docs, and try to implement that basic usage in your app (`app/(tabs)/index.tsx`).
 
-In order for the component to have a "size", you'll want to modify the stylesheet code in that same file:
+In order for the component to have a "size", you'll want to modify the styling of the root view of the component:
 
-```diff
-const styles = StyleSheet.create({
-  container: {
+```tsx
+return (
+  <ThemedView style={{
     flex: 1,
--    alignItems: 'center',
--    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  separator: {
-    marginVertical: 30,
-    height: 1,
-    width: '80%',
-  },
-});
+  }}>
 ```
 
 ### Load the data
@@ -126,10 +152,10 @@ You can find the data and images for the coffees [in this zip file](projects/dat
 │   ├── (tabs)
 │   │   ├── _layout.tsx
 │   │   ├── index.tsx
-│   │   ├── two.tsx
+│   │   ├── order.tsx
 │   ├── _layout.tsx
-│   ├── [...missing].tsx
 │   ├── +html.tsx
+│   ├── +not-found.tsx
 ├── data
 │   ├── coffees
 │   │   ├── 1-oat-milk-latte.jpg
@@ -181,9 +207,9 @@ export default function TabOneScreen() {
     <View style={styles.container}>
       <FlashList
 -        data={DATA}
--        renderItem={({ item }) => <Text>{item.title}</Text>}
+-        renderItem={({ item }) => <ThemedText>{item.title}</ThemedText>}
 +        data={coffees}
-+        renderItem={({ item }: { item:Coffee }) => <Text>{item.name}</Text>}
++        renderItem={({ item }) => <ThemedText>{item.name}</ThemedText>}
         estimatedItemSize={200}
       />
     </View>
@@ -195,35 +221,30 @@ You'll need to do a full app refresh to see the changes, because of the **aggres
 
 ### Display the image, name and price
 
-We want to show more than just a coffee name, but also a thumbnail and price of the coffee. In order to display images in an Expo app, we'll use [the Expo Image component](https://docs.expo.dev/versions/latest/sdk/image/).
-
-**Add the Image component to your project using the command below:**
-
-```bash
-npx expo install expo-image
-```
+We want to show more than just a coffee name, but also a thumbnail and price of the coffee.
 
 Import the Image component in your `app/(tabs)/index.tsx` file:
 
 ```ts
-import { Image } from 'expo-image';
+import { Image } from 'react-native';
 ```
 
 Adjust the renderItem method, so it shows the Image and the label next to each other:
 
+
 ```diff
 <FlashList
   data={coffees}
--  renderItem={({ item }: { item:Coffee }) => <Text>{item.name}</Text>}
-+  renderItem={({ item }: { item:Coffee }) => <View>
+-  renderItem={({ item }) => <ThemedText>{item.name}</ThemedText>}
++  renderItem={({ item }) => <ThemedView>
 +    <Image source={item.image} style={{ width: 40, height: 40 }} />
-+    <Text>{item.name}</Text>
-+  </View>}
++    <ThemedText>{item.name}</ThemedText>
++  </ThemedView>}
   estimatedItemSize={200}
 />
 ```
 
-Once you've got that image working, adjust the renderItem method so it shows the price as well. Use extra `<View>` components to style the layout of the image, name and price.
+Once you've got that image working, adjust the renderItem method so it shows the price as well. Use extra `<ThemedView>` components to style the layout of the image, name and price.
 
 ![overview screen](images/overview-screen.png)
 
@@ -251,30 +272,33 @@ Whenever we tab on one of the coffees, we want to navigate to a detail page. In 
 │   │   │   ├── _layout.tsx
 │   │   │   ├── index.tsx
 │   │   ├── _layout.tsx
-│   │   ├── two.tsx
+│   │   ├── order.tsx
 │   ├── _layout.tsx
 ...
 ```
 
-You'll notice that there are two headers now, one for the tab navigator and one for the stack navigator. Our "Coffees" label and icon is also gone in our tab bar.
+You'll notice you're getting a familiar warning message:
 
-![nested navigators](images/nested-navigators.png)
+> No route named "index" exists in nested children
+
+Make sure to update the name of the screen in the `app/(tabs)/_layout.tsx` file.
 
 ### Link to the detail screen
 
 Within the (index) group, create a new file `[id].tsx`. This will be our detail screen.
 
-Create a basic View with some text in it:
+Create a basic view with some text in it:
 
 ```tsx
-import { View, Text } from "../../../components/Themed";
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
 
-export default function CoffeeDetailScreen() {
+export default function DetailScreen() {
   return (
-    <View>
-      <Text>Detail</Text>
-    </View>
-  )
+    <ThemedView>
+      <ThemedText type="title">Detail</ThemedText>
+    </ThemedView>
+  );
 }
 ```
 
@@ -287,20 +311,19 @@ import { Link } from 'expo-router';
 Wrap the FlashList items in a Link component, and link to the detail screen:
 
 ```diff
-renderItem={({ item }: { item:Coffee }) => (
-+  <Link href={`/(tabs)/(index)/${item.id}`}>
-    <View style={styles.left}>
-      <Image
-        source={item.image}
-        style={{ width: 60, height: 60 }}
-      />
-      <View>
-        <Text style={styles.name}>{item.name}</Text>
-        <Text>EUR {item.price}</Text>
-      </View>
-    </View>
-+  </Link>
-)}
+renderItem={({ item }) => (
++ <Link href={`/(tabs)/(index)/${item.id}`}>
+  <ThemedView style={{
+    flexDirection: 'row',
+    gap: 10,
+  }}>
+    <Image source={item.image} style={{ width: 50, height: 50 }} />
+    <ThemedView>
+      <ThemedText type='defaultSemiBold'>{item.name}</ThemedText>
+      <ThemedText>{item.price.toLocaleString("be-NL", { style: "currency", currency: "EUR" })}</ThemedText>
+    </ThemedView>
+  </ThemedView>
++</Link>)}
 ```
 
 Test the app (you might need to do a full restart of your dev server). Tapping an item should move to the detail screen:
@@ -312,18 +335,19 @@ Test the app (you might need to do a full restart of your dev server). Tapping a
 The filename of our detail view has a special name: `[id].tsx`. This means that the id of the coffee will be available as a parameter in the `useLocalSearchParams` hook of expo-router.
 
 ```tsx
-import { useLocalSearchParams } from "expo-router";
-import { View, Text } from "../../../components/Themed";
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
+import { useLocalSearchParams } from 'expo-router';
 
-export default function CoffeeDetailScreen() {
+export default function DetailScreen() {
 
   const { id } = useLocalSearchParams();
 
   return (
-    <View>
-      <Text>Detail of {id}</Text>
-    </View>
-  )
+    <ThemedView>
+      <ThemedText type="title">Detail of {id}</ThemedText>
+    </ThemedView>
+  );
 }
 ```
 
@@ -357,73 +381,42 @@ Once you've got this working, adjust the code so that it shows the image and des
 
 ![basic detail screen](images/basic-detail-screen.png)
 
-## Clean up headers
+## Header Titles
 
-We've got duplicate headers and an error message complaining we don't have a route named "index". Let's fix that.
+Our detail header currently shows the text "[id]". We want to show the name of the coffee in the header.
 
-Each Navigation Stack has it's own header. We can choose to hide the headers of the TabNavigator and only show the header of the StackNavigator.
-
-```diff
-<Tabs
-  screenOptions={{
-    tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-+    headerShown: false,
-  }}>
-  <Tabs.Screen
-    name="index"
-    options={{
-      title: 'Coffees',
-      tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
-    }}
-  />
-  <Tabs.Screen
-    name="two"
-    options={{
-      title: 'Order',
-      tabBarIcon: ({ color }) => <TabBarIcon name="shopping-cart" color={color} />,
-    }}
-  />
-</Tabs>
-```
-
-We want to show the coffee name as the title of the screen. We can do this by returning a fragment from our detail component, and adding a `Stack.Screen` component to the fragment:
+We can do so, by adding a `<Stack.Screen />` component in our view.
 
 ```diff
-+ return <>
-+  <Stack.Screen options={{
-+    title: coffee.name,
-+  }} />
-  <View style={{
-    flex: 1,
-    overflow: 'hidden',
-  }}>
-    <Image source={coffee.image} style={{
-      width: '100%',
-      height: 300,
-    }} />
-    ...
-  </View>
-+</>;
+import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
+import { coffees } from '@/data/coffees';
+- import { useLocalSearchParams } from 'expo-router';
++ import { Stack, useLocalSearchParams } from 'expo-router';
+import { Image } from 'react-native';
+
+export default function DetailScreen() {
+
+  const { id } = useLocalSearchParams();
+  const coffee = coffees.find((coffee) => coffee.id === Number(id));
+
+  return (
+    <ThemedView>
++      <Stack.Screen
++        options={{ title: coffee?.name }}
++      />
+      <Image source={coffee?.image} style={{ width: '100%', height: 300 }} />
+      <ThemedView style={{ padding: 16 }}>
+        <ThemedText>{coffee?.description}</ThemedText>
+      </ThemedView>
+    </ThemedView>
+  );
+}
 ```
+
+The detail screen should now show the coffee title.
 
 Also adjust the overview, so that it shows the title "Coffees" in the header.
-
-### No route error
-
-There's one more error, complaining about a route "index" not being found. This is because we moved our "index" screen into a group called index. Update the name of the screen and reload the app:
-
-```diff
-<Tabs.Screen
--  name="index"
-+ name="(index)"
-  options={{
-    title: 'Coffees',
-    tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
-  }}
-/>
-```
-
-![overview screen](images/overview-screen.png)
 
 ## Central data store using Zustand
 
@@ -554,11 +547,15 @@ const orderCoffee = useOrderStore(state => state.orderCoffee);
 
 Update the renderItem logic, so that it contains an add button to the right.
 
-```ts
+```tsx
 <Pressable
   onPress={() => orderCoffee(item)}
->
-  <FontAwesome name="plus-circle" size={24} />
+  style={({pressed}) => [
+    {
+      opacity: pressed ? 0.5 : 1.0,
+    },
+  ]}>
+  <Ionicons name='add-circle' size={24} />
 </Pressable>
 ```
 
@@ -595,13 +592,11 @@ You should see a badge with a number on the tab icon now. This does not take int
 The Order tab will also consist of two screens in a stack: the order overview and an order confirmation screen.
 
 1. Create a subfolder `app/(tabs)/order` and create a file `_layout.tsx` in that folder. This layout is a copy from the `(index)` layout, which is a re-export of the Stack component from expo-router.
-2. Move the `app/(tabs)/two.tsx` file into the `app/(tabs)/order` folder and update the imports. Rename that file to `index.tsx`.
-3. Update the Tabs layout, so that it links correctly to that order screen.
+2. Move the `app/(tabs)/order.tsx` file into the `app/(tabs)/order` folder and update the imports. Rename that file to `index.tsx`.
 
 ```
 ├── app
 │   ├── (tabs)
-│   │   ├── _layout.tsx
 │   │   ├── (index)
 │   │   │   ├── _layout.tsx
 │   │   │   ├── [id].tsx

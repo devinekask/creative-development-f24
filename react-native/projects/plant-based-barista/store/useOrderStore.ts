@@ -18,6 +18,7 @@ export const useOrderStore = create<OrderState>()((set) => ({
     const coffeeIndex = state.orders.findIndex((order) => order.coffee.id === coffee.id);
     const coffeeHasAlreadyBeenOrdered = coffeeIndex !== -1;
     if (coffeeHasAlreadyBeenOrdered) {
+      // todo: return an updated array
       return {
         orders: state.orders.map((order, index) => {
           if (index === coffeeIndex) {
@@ -28,8 +29,9 @@ export const useOrderStore = create<OrderState>()((set) => ({
           }
           return order;
         })
-      };
+      }
     }
+    // else: return orders array with an added order
     return {
       orders: [
         ...state.orders,
@@ -40,7 +42,7 @@ export const useOrderStore = create<OrderState>()((set) => ({
       ]
     };
   }),
-  resetOrders: () => set(() => ({
+  resetOrders: () => set((state) => ({
     orders: [],
   })),
 }))
